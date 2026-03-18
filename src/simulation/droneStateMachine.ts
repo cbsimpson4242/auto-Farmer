@@ -3,6 +3,10 @@ import { BATTERY_LOW_THRESHOLD, CHARGE_RATE, FLY_SPEED, TRAIL_LENGTH } from './c
 import { coordinateDistanceMeters, moveCoordinateToward } from './geo'
 import { tryAssignWork, cellToPosition } from './workPartitioner'
 
+function shouldRetaskDrone(sim: SimState, drone: Drone): boolean {
+  return sim.mission.pendingFieldId != null && drone.route?.fieldId !== sim.mission.pendingFieldId
+}
+
 function pushTrail(drone: Drone) {
   drone.trail.push({ lng: drone.position.lng, lat: drone.position.lat })
   if (drone.trail.length > TRAIL_LENGTH) drone.trail.shift()
@@ -76,6 +80,13 @@ export function tickDrone(drone: Drone, sim: SimState, deltaMs: number): void {
         if (drone.batteryLevel < 0) drone.batteryLevel = 0
 
         route.waypointIndex++
+        route.completedCount++
+
+        if (shouldRetaskDrone(sim, drone)) {
+          drone.targetPosition = { ...sim.base.position }
+          drone.status = 'returning'
+          break
+        }
 
         if (route.waypointIndex >= route.waypoints.length) {
           drone.route = null

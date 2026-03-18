@@ -116,6 +116,27 @@ input {
   margin-bottom: 12px;
 }
 
+.mission-chip-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.mission-chip {
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.04);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.mission-chip-label {
+  color: rgba(243, 233, 212, 0.65);
+  font-size: 0.8rem;
+}
+
 .button-row,
 .speed-grid {
   display: grid;

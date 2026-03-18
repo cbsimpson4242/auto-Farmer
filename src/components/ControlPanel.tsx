@@ -1,3 +1,5 @@
+import { StatsSnapshot } from '../types/simulation'
+
 interface Props {
   isRunning: boolean
   isPaused: boolean
@@ -7,6 +9,8 @@ interface Props {
   onSpeedChange: (multiplier: number) => void
   onDroneCountChange: (count: number) => void
   droneCount: number
+  mission: StatsSnapshot['mission']
+  selectedFieldLabel: string | null
 }
 
 export function ControlPanel({
@@ -18,6 +22,8 @@ export function ControlPanel({
   onSpeedChange,
   onDroneCountChange,
   droneCount,
+  mission,
+  selectedFieldLabel,
 }: Props) {
   return (
     <section className="panel-card control-card">
@@ -29,6 +35,17 @@ export function ControlPanel({
       <p className="panel-copy">
         Start a treatment pass, pause for inspection, or reset to compare how quickly each launch plan clears the parcels.
       </p>
+
+      <div className="mission-chip-row">
+        <div className="mission-chip">
+          <span className="mission-chip-label">Selected</span>
+          <strong>{selectedFieldLabel ?? 'No field selected'}</strong>
+        </div>
+        <div className="mission-chip">
+          <span className="mission-chip-label">Mission</span>
+          <strong>{mission.pendingFieldLabel ? `Retasking to ${mission.pendingFieldLabel}` : mission.status}</strong>
+        </div>
+      </div>
 
       <div className="button-row">
         <button onClick={onStart} disabled={isRunning && !isPaused} className="ui-button">

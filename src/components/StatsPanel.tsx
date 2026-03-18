@@ -43,6 +43,8 @@ function statusColor(status: DroneStatus): string {
 }
 
 export function StatsPanel({ snapshot, selectedField }: Props) {
+  const assignedDrones = snapshot.drones.filter(drone => drone.assignedFieldId === selectedField.id)
+
   return (
     <section className="panel-card stats-card">
       <div className="panel-heading">
@@ -66,6 +68,14 @@ export function StatsPanel({ snapshot, selectedField }: Props) {
         <div className="metric-tile">
           <span>Crop</span>
           <strong>{selectedField.crop}</strong>
+        </div>
+        <div className="metric-tile">
+          <span>Mission Target</span>
+          <strong>{snapshot.mission.targetFieldLabel ?? 'None'}</strong>
+        </div>
+        <div className="metric-tile">
+          <span>Queued Drones</span>
+          <strong>{assignedDrones.length}</strong>
         </div>
       </div>
 
@@ -99,7 +109,7 @@ export function StatsPanel({ snapshot, selectedField }: Props) {
             <span>Drone {drone.id + 1}</span>
             <BatteryBar level={drone.batteryLevel} />
             <span className="drone-status" style={{ color: statusColor(drone.status) }}>
-              {statusLabel(drone.status)}
+              {drone.routeProgress > 0 ? `${Math.round(drone.routeProgress * 100)}%` : statusLabel(drone.status)}
             </span>
           </div>
         ))}

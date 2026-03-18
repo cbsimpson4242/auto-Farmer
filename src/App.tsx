@@ -15,8 +15,9 @@ export default function App() {
     onReset,
     onSpeedChange,
     onDroneCountChange,
+    onTargetFieldChange,
   } = useSimulation()
-  const [selectedFieldId, setSelectedFieldId] = useState(0)
+  const [selectedFieldId, setSelectedFieldId] = useState(snapshot.mission.targetFieldId ?? 0)
 
   useEffect(() => {
     if (!snapshot.fieldCoverage.some(field => field.id === selectedFieldId) && snapshot.fieldCoverage[0]) {
@@ -41,7 +42,14 @@ export default function App() {
             Inspect real-shaped parcels, avoid exclusion zones, and watch coverage build across live satellite imagery.
           </p>
         </div>
-        <MapView sim={sim} selectedFieldId={selectedFieldId} onSelectField={setSelectedFieldId} />
+        <MapView
+          sim={sim}
+          selectedFieldId={selectedFieldId}
+          onSelectField={fieldId => {
+            setSelectedFieldId(fieldId)
+            onTargetFieldChange(fieldId)
+          }}
+        />
       </div>
 
       <div className="sidebar">
@@ -54,6 +62,8 @@ export default function App() {
           onSpeedChange={onSpeedChange}
           onDroneCountChange={onDroneCountChange}
           droneCount={snapshot.drones.length}
+          mission={snapshot.mission}
+          selectedFieldLabel={selectedField?.label ?? null}
         />
         {selectedField ? <StatsPanel snapshot={snapshot} selectedField={selectedField} /> : null}
       </div>

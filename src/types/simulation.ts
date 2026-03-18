@@ -49,6 +49,7 @@ export interface DroneRoute {
   fieldId: number
   waypoints: Vec2[]
   waypointIndex: number
+  completedCount: number
 }
 
 export interface Drone {
@@ -65,6 +66,12 @@ export interface Drone {
   trail: Coordinate[]
 }
 
+export interface MissionState {
+  targetFieldId: number | null
+  pendingFieldId: number | null
+  status: 'idle' | 'ready' | 'running' | 'retasking'
+}
+
 export interface BaseStation {
   position: Coordinate
   label: string
@@ -73,6 +80,13 @@ export interface BaseStation {
 export interface StatsSnapshot {
   elapsedMs: number
   totalCoverage: number
+  mission: {
+    targetFieldId: number | null
+    pendingFieldId: number | null
+    status: MissionState['status']
+    targetFieldLabel: string | null
+    pendingFieldLabel: string | null
+  }
   fieldCoverage: {
     id: number
     label: string
@@ -88,6 +102,9 @@ export interface StatsSnapshot {
     status: DroneStatus
     batteryLevel: number
     cellsCovered: number
+    assignedFieldId: number | null
+    assignedFieldLabel: string | null
+    routeProgress: number
   }[]
   totalFertilizer: number
 }
@@ -101,6 +118,7 @@ export interface SimState {
   fields: Field[]
   base: BaseStation
   drones: Drone[]
+  mission: MissionState
   fieldWorkQueues: Map<number, Vec2[]>
   statsSnapshot: StatsSnapshot
 }

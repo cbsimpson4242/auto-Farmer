@@ -3,6 +3,7 @@ import maplibregl, { GeoJSONSource, LngLatBoundsLike, Map } from 'maplibre-gl'
 import { closeRing, cellPolygon, centroid } from '../simulation/geo'
 import { COLORS } from '../simulation/constants'
 import { Coordinate, Field, SimState } from '../types/simulation'
+import { cellToPosition } from '../simulation/workPartitioner'
 
 interface Props {
   sim: SimState
@@ -24,6 +25,17 @@ function polygonFeature(coordinates: Coordinate[], properties: Record<string, un
     geometry: {
       type: 'Polygon' as const,
       coordinates: [closeRing(coordinates).map(point => [point.lng, point.lat])],
+    },
+    properties,
+  }
+}
+
+function lineFeature(coordinates: Coordinate[], properties: Record<string, unknown>) {
+  return {
+    type: 'Feature' as const,
+    geometry: {
+      type: 'LineString' as const,
+      coordinates: coordinates.map(point => [point.lng, point.lat]),
     },
     properties,
   }
@@ -87,6 +99,14 @@ export function MapView({ sim, selectedFieldId, onSelectField }: Props) {
     return { type: 'FeatureCollection' as const, features }
   }, [selectedFieldId, sim.fields])
 
+  const geofenceData = useMemo(() => {
+    const field = sim.mission.targetFieldId == null ? null : sim.fields[sim.mission.targetFieldId]
+    return {
+      type: 'FeatureCollection' as const,
+      features: field ? [polygonFeature(field.polygon, { fieldId: field.id, label: field.label })] : [],
+    }
+  }, [sim.fields, sim.mission.targetFieldId])
+
   const droneData = useMemo(
     () => ({
       type: 'FeatureCollection' as const,
@@ -119,6 +139,61 @@ export function MapView({ sim, selectedFieldId, onSelectField }: Props) {
           properties: {
             id: drone.id,
             status: drone.status,
+          },
+        })),
+    }),
+    [sim.drones],
+  )
+
+  const routeData = useMemo(() => {
+    const features = sim.drones.flatMap(drone => {
+      if (!drone.route) return []
+
+      const field = sim.fields[drone.route.fieldId]
+      const remainingWaypoints = drone.route.waypoints.slice(drone.route.waypointIndex)
+      if (remainingWaypoints.length === 0) return []
+
+      const remainingCoordinates = remainingWaypoints.map(waypoint => cellToPosition(field, waypoint.x, waypoint.y))
+      return [
+        lineFeature([drone.position, ...remainingCoordinates], {
+          id: drone.id,
+          fieldId: field.id,
+          kind: 'route',
+        }),
+      ]
+    })
+
+    return { type: 'FeatureCollection' as const, features }
+  }, [sim.drones, sim.fields])
+
+  const launchPathData = useMemo(() => {
+    const features = sim.drones.flatMap(drone => {
+      if (!drone.route) return []
+      return [
+        lineFeature([sim.base.position, drone.position], {
+          id: drone.id,
+          kind: 'launch',
+        }),
+      ]
+    })
+
+    return { type: 'FeatureCollection' as const, features }
+  }, [sim.base.position, sim.drones])
+
+  const progressPointData = useMemo(
+    () => ({
+      type: 'FeatureCollection' as const,
+      features: sim.drones
+        .filter(drone => drone.route)
+        .map(drone => ({
+          type: 'Feature' as const,
+          geometry: {
+            type: 'Point' as const,
+            coordinates: [drone.targetPosition.lng, drone.targetPosition.lat],
+          },
+          properties: {
+            id: drone.id,
+            fieldId: drone.route?.fieldId ?? null,
           },
         })),
     }),
@@ -173,9 +248,13 @@ export function MapView({ sim, selectedFieldId, onSelectField }: Props) {
       map.addSource('parcels', { type: 'geojson', data: parcelData })
       map.addSource('exclusions', { type: 'geojson', data: exclusionData })
       map.addSource('targets', { type: 'geojson', data: targetData })
+      map.addSource('geofence', { type: 'geojson', data: geofenceData })
       map.addSource('coverage', { type: 'geojson', data: coverageData })
       map.addSource('drones', { type: 'geojson', data: droneData })
       map.addSource('trails', { type: 'geojson', data: trailData })
+      map.addSource('routes', { type: 'geojson', data: routeData })
+      map.addSource('launch-paths', { type: 'geojson', data: launchPathData })
+      map.addSource('progress-points', { type: 'geojson', data: progressPointData })
       map.addSource('base', { type: 'geojson', data: baseData })
 
       map.addLayer({
@@ -194,6 +273,26 @@ export function MapView({ sim, selectedFieldId, onSelectField }: Props) {
         paint: {
           'fill-color': COLORS.targetFill,
           'fill-outline-color': COLORS.targetStroke,
+        },
+      })
+      map.addLayer({
+        id: 'geofence-fill',
+        type: 'fill',
+        source: 'geofence',
+        paint: {
+          'fill-color': '#82d8ff',
+          'fill-opacity': 0.05,
+        },
+      })
+      map.addLayer({
+        id: 'geofence-line',
+        type: 'line',
+        source: 'geofence',
+        paint: {
+          'line-color': '#8be7f9',
+          'line-width': 3.5,
+          'line-opacity': 0.95,
+          'line-dasharray': [2, 1.5],
         },
       })
       map.addLayer({
@@ -223,6 +322,27 @@ export function MapView({ sim, selectedFieldId, onSelectField }: Props) {
         },
       })
       map.addLayer({
+        id: 'launch-line',
+        type: 'line',
+        source: 'launch-paths',
+        paint: {
+          'line-color': '#f5bd63',
+          'line-width': 2,
+          'line-opacity': 0.75,
+          'line-dasharray': [1, 1.5],
+        },
+      })
+      map.addLayer({
+        id: 'route-line',
+        type: 'line',
+        source: 'routes',
+        paint: {
+          'line-color': '#ffffff',
+          'line-width': 2.4,
+          'line-opacity': 0.9,
+        },
+      })
+      map.addLayer({
         id: 'trail-line',
         type: 'line',
         source: 'trails',
@@ -230,6 +350,17 @@ export function MapView({ sim, selectedFieldId, onSelectField }: Props) {
           'line-color': '#8be7f9',
           'line-width': 2,
           'line-opacity': 0.65,
+        },
+      })
+      map.addLayer({
+        id: 'progress-points',
+        type: 'circle',
+        source: 'progress-points',
+        paint: {
+          'circle-radius': 4,
+          'circle-color': '#fff2cb',
+          'circle-stroke-width': 2,
+          'circle-stroke-color': '#0b1620',
         },
       })
       map.addLayer({
@@ -286,7 +417,7 @@ export function MapView({ sim, selectedFieldId, onSelectField }: Props) {
       map.remove()
       mapRef.current = null
     }
-  }, [baseData, coverageData, droneData, exclusionData, onSelectField, parcelData, sim.fields, targetData])
+  }, [baseData, coverageData, droneData, exclusionData, geofenceData, launchPathData, onSelectField, parcelData, progressPointData, routeData, sim.fields, targetData])
 
   useEffect(() => {
     const map = mapRef.current
@@ -295,11 +426,15 @@ export function MapView({ sim, selectedFieldId, onSelectField }: Props) {
     ;(map.getSource('parcels') as GeoJSONSource | undefined)?.setData(parcelData)
     ;(map.getSource('exclusions') as GeoJSONSource | undefined)?.setData(exclusionData)
     ;(map.getSource('targets') as GeoJSONSource | undefined)?.setData(targetData)
+    ;(map.getSource('geofence') as GeoJSONSource | undefined)?.setData(geofenceData)
     ;(map.getSource('coverage') as GeoJSONSource | undefined)?.setData(coverageData)
     ;(map.getSource('drones') as GeoJSONSource | undefined)?.setData(droneData)
     ;(map.getSource('trails') as GeoJSONSource | undefined)?.setData(trailData)
+    ;(map.getSource('routes') as GeoJSONSource | undefined)?.setData(routeData)
+    ;(map.getSource('launch-paths') as GeoJSONSource | undefined)?.setData(launchPathData)
+    ;(map.getSource('progress-points') as GeoJSONSource | undefined)?.setData(progressPointData)
     ;(map.getSource('base') as GeoJSONSource | undefined)?.setData(baseData)
-  }, [baseData, coverageData, droneData, exclusionData, parcelData, targetData, trailData])
+  }, [baseData, coverageData, droneData, exclusionData, geofenceData, launchPathData, parcelData, progressPointData, routeData, targetData, trailData])
 
   return <div ref={containerRef} className="map-view" />
 }
