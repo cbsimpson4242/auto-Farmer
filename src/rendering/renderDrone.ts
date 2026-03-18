@@ -24,7 +24,7 @@ export function renderDrone(ctx: CanvasRenderingContext2D, drone: Drone): void {
   if (trail.length > 1) {
     for (let i = 0; i < trail.length - 1; i++) {
       const alpha = (i + 1) / trail.length * 0.4
-      ctx.strokeStyle = `rgba(200, 255, 200, ${alpha})`
+      ctx.strokeStyle = `rgba(96, 165, 250, ${alpha})`
       ctx.lineWidth = 1
       ctx.beginPath()
       ctx.moveTo(trail[i].x, trail[i].y)

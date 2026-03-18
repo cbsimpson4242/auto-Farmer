@@ -23,11 +23,11 @@ function statusLabel(status: DroneStatus): string {
 
 function statusColor(status: DroneStatus): string {
   switch (status) {
-    case 'working': return '#7ccf7c'
-    case 'returning': return '#d36d59'
-    case 'charging': return '#6ebddb'
-    case 'flying_to_field': return '#ebe4c8'
-    default: return '#c0c7bc'
+    case 'working': return '#60a5fa'
+    case 'returning': return '#94a3b8'
+    case 'charging': return '#fbbf24'
+    case 'flying_to_field': return '#f8fafc'
+    default: return '#475569'
   }
 }
 
@@ -108,7 +108,7 @@ export function StatsPanel({ snapshot }: Props) {
 }
 
 function BatteryBar({ level }: { level: number }) {
-  const color = level > 0.5 ? '#7ccf7c' : level > 0.2 ? '#dcbf63' : '#d36d59'
+  const color = level > 0.5 ? '#22c55e' : level > 0.2 ? '#eab308' : '#ef4444'
 
   return (
     <div className="battery-wrap">

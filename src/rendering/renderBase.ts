@@ -21,7 +21,7 @@ export function renderBase(ctx: CanvasRenderingContext2D, base: BaseStation, dro
   const totalPadsWidth = droneCount * padSize + (droneCount - 1) * padGap
   const startX = px.x - totalPadsWidth / 2
   for (let i = 0; i < droneCount; i++) {
-    ctx.fillStyle = '#667788'
+    ctx.fillStyle = '#1e293b'
     ctx.fillRect(startX + i * (padSize + padGap), px.y - padSize / 2, padSize, padSize)
   }
 

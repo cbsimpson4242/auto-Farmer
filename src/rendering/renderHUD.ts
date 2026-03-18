@@ -26,7 +26,7 @@ export function renderHUD(ctx: CanvasRenderingContext2D, sim: SimState): void {
     // Coverage overlay in top-right of field
     const textX = field.originPx.x + field.cols * field.cellSize - 40
     ctx.font = '11px monospace'
-    ctx.fillStyle = coverage >= 1 ? '#80ff80' : COLORS.hudText
+    ctx.fillStyle = coverage >= 1 ? '#60a5fa' : COLORS.hudText
     ctx.fillText(`${pct}%`, textX, field.originPx.y - 6)
   }
 }
