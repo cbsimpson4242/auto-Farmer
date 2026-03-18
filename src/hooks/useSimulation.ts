@@ -116,6 +116,7 @@ export function useSimulation() {
   const [snapshot, setSnapshot] = useState<StatsSnapshot>(() => extractSnapshot(simRef.current))
   const [isRunning, setIsRunning] = useState(false)
   const [isPaused, setIsPaused] = useState(false)
+  const [speedMultiplier, setSpeedMultiplier] = useState(simRef.current.speedMultiplier)
 
   // Set canvas size based on field layout
   useEffect(() => {
@@ -192,6 +193,7 @@ export function useSimulation() {
     setSnapshot(extractSnapshot(newSim))
     setIsRunning(false)
     setIsPaused(false)
+    setSpeedMultiplier(speedMultiplier)
 
     // Resize canvas
     const canvas = canvasRef.current
@@ -204,6 +206,7 @@ export function useSimulation() {
 
   const onSpeedChange = useCallback((multiplier: number) => {
     simRef.current.speedMultiplier = multiplier
+    setSpeedMultiplier(multiplier)
   }, [])
 
   const onDroneCountChange = useCallback((count: number) => {
@@ -220,6 +223,7 @@ export function useSimulation() {
     snapshot,
     isRunning,
     isPaused,
+    speedMultiplier,
     onStart,
     onPause,
     onReset,

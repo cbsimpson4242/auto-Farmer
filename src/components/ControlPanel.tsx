@@ -1,8 +1,7 @@
-import React from 'react'
-
 interface Props {
   isRunning: boolean
   isPaused: boolean
+  speedMultiplier: number
   onStart: () => void
   onPause: () => void
   onReset: () => void
@@ -14,6 +13,7 @@ interface Props {
 export function ControlPanel({
   isRunning,
   isPaused,
+  speedMultiplier,
   onStart,
   onPause,
   onReset,
@@ -22,35 +22,40 @@ export function ControlPanel({
   droneCount,
 }: Props) {
   return (
-    <div style={{ marginBottom: 16 }}>
-      <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+    <div className="control-panel">
+      <div className="panel-heading">
+        <h2>Controls</h2>
+        <span>{isRunning ? (isPaused ? 'Paused' : 'Running') : 'Standby'}</span>
+      </div>
+
+      <div className="button-row">
         <button
           onClick={onStart}
           disabled={isRunning && !isPaused}
-          style={btnStyle}
+          className="action-button primary"
         >
           {!isRunning ? 'Start' : 'Resume'}
         </button>
         <button
           onClick={onPause}
           disabled={!isRunning || isPaused}
-          style={btnStyle}
+          className="action-button"
         >
           Pause
         </button>
-        <button onClick={onReset} style={btnStyle}>
+        <button onClick={onReset} className="action-button ghost">
           Reset
         </button>
       </div>
 
-      <div style={{ marginBottom: 12 }}>
-        <label style={labelStyle}>Speed:</label>
-        <div style={{ display: 'flex', gap: 4 }}>
+      <div className="control-section">
+        <label className="control-label">Simulation speed</label>
+        <div className="speed-grid">
           {[1, 2, 4, 8].map(s => (
             <button
               key={s}
               onClick={() => onSpeedChange(s)}
-              style={{ ...btnStyle, fontSize: 11, padding: '3px 8px' }}
+              className={`speed-button ${speedMultiplier === s ? 'active' : ''}`}
             >
               {s}x
             </button>
@@ -58,37 +63,25 @@ export function ControlPanel({
         </div>
       </div>
 
-      <div>
-        <label style={labelStyle}>Drones: {droneCount}</label>
+      <div className="control-section">
+        <div className="slider-header">
+          <label className="control-label" htmlFor="drone-count">Fleet size</label>
+          <span>{droneCount} drones</span>
+        </div>
         <input
+          id="drone-count"
           type="range"
           min={1}
           max={8}
           value={droneCount}
           onChange={e => onDroneCountChange(Number(e.target.value))}
           disabled={isRunning}
-          style={{ width: '100%' }}
+          className="drone-slider"
         />
+        <p className="field-note">
+          {isRunning ? 'Reset to change drone count.' : 'More drones improve coverage but increase coordination complexity.'}
+        </p>
       </div>
     </div>
   )
-}
-
-const btnStyle: React.CSSProperties = {
-  padding: '6px 14px',
-  background: '#3a5a3a',
-  color: '#e0e0d0',
-  border: '1px solid #5a8a5a',
-  borderRadius: 4,
-  cursor: 'pointer',
-  fontFamily: 'monospace',
-  fontSize: 13,
-}
-
-const labelStyle: React.CSSProperties = {
-  display: 'block',
-  color: '#c0c0b0',
-  fontFamily: 'monospace',
-  fontSize: 12,
-  marginBottom: 4,
 }

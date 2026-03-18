@@ -1,18 +1,20 @@
-import React from 'react'
+import type { RefObject } from 'react'
 
 interface Props {
-  canvasRef: React.RefObject<HTMLCanvasElement>
+  canvasRef: RefObject<HTMLCanvasElement>
 }
 
 export function SimulationCanvas({ canvasRef }: Props) {
   return (
-    <canvas
-      ref={canvasRef}
-      style={{
-        display: 'block',
-        background: '#1a2e1a',
-        borderRadius: 4,
-      }}
-    />
+    <div className="canvas-frame">
+      <div className="canvas-header">
+        <div>
+          <p className="canvas-label">Live map</p>
+          <h2>Field simulation</h2>
+        </div>
+        <span className="canvas-chip">Coverage feed</span>
+      </div>
+      <canvas ref={canvasRef} className="simulation-canvas" />
+    </div>
   )
 }

@@ -1,4 +1,3 @@
-import React from 'react'
 import { StatsSnapshot, DroneStatus } from '../types/simulation'
 
 interface Props {
@@ -24,83 +23,99 @@ function statusLabel(status: DroneStatus): string {
 
 function statusColor(status: DroneStatus): string {
   switch (status) {
-    case 'working': return '#60ff60'
-    case 'returning': return '#ff8060'
-    case 'charging': return '#60c0ff'
-    case 'flying_to_field': return '#e0e0ff'
-    default: return '#c0c0c0'
+    case 'working': return '#7ccf7c'
+    case 'returning': return '#d36d59'
+    case 'charging': return '#6ebddb'
+    case 'flying_to_field': return '#ebe4c8'
+    default: return '#c0c7bc'
   }
 }
 
 export function StatsPanel({ snapshot }: Props) {
+  const totalCoverage = Math.round(snapshot.totalCoverage * 100)
+
   return (
-    <div>
-      <div style={sectionStyle}>
-        <div style={rowStyle}>
-          <span style={dimStyle}>Elapsed:</span>
-          <span>{formatTime(snapshot.elapsedMs)}</span>
+    <div className="stats-panel">
+      <div className="panel-heading">
+        <h2>Telemetry</h2>
+        <span>{totalCoverage}% complete</span>
+      </div>
+
+      <div className="metric-grid">
+        <div className="metric-card">
+          <span>Elapsed</span>
+          <strong>{formatTime(snapshot.elapsedMs)}</strong>
         </div>
-        <div style={rowStyle}>
-          <span style={dimStyle}>Fertilizer:</span>
-          <span>{snapshot.totalFertilizer.toFixed(1)}L</span>
+        <div className="metric-card">
+          <span>Fertilizer</span>
+          <strong>{snapshot.totalFertilizer.toFixed(1)}L</strong>
+        </div>
+        <div className="metric-card accent">
+          <span>Total coverage</span>
+          <strong>{totalCoverage}%</strong>
         </div>
       </div>
 
-      <div style={{ ...sectionStyle, borderTop: '1px solid #3a3a3a' }}>
-        <div style={rowStyle}>
-          <span style={dimStyle}>Total Coverage:</span>
-          <span style={{ color: '#80ff80', fontWeight: 'bold' }}>
-            {(snapshot.totalCoverage * 100).toFixed(0)}%
-          </span>
+      <div className="stats-section">
+        <div className="section-title-row">
+          <h3>Field coverage</h3>
+          <span>{snapshot.fieldCoverage.length} zones</span>
         </div>
-        {snapshot.fieldCoverage.map(fc => (
-          <div key={fc.id} style={rowStyle}>
-            <span style={dimStyle}>{fc.label}:</span>
-            <span>{(fc.coverage * 100).toFixed(0)}%</span>
-          </div>
-        ))}
+
+        <div className="coverage-list">
+          {snapshot.fieldCoverage.map(fc => {
+            const coverage = Math.round(fc.coverage * 100)
+            return (
+              <div key={fc.id} className="coverage-row">
+                <div className="coverage-labels">
+                  <span>{fc.label}</span>
+                  <strong>{coverage}%</strong>
+                </div>
+                <div className="coverage-track">
+                  <div className="coverage-fill" style={{ width: `${coverage}%` }} />
+                </div>
+              </div>
+            )
+          })}
+        </div>
       </div>
 
-      <div style={{ ...sectionStyle, borderTop: '1px solid #3a3a3a' }}>
-        <div style={{ ...dimStyle, marginBottom: 6 }}>Drones</div>
-        {snapshot.drones.map(d => (
-          <div key={d.id} style={{ ...rowStyle, alignItems: 'center' }}>
-            <span style={{ minWidth: 55 }}>Drone {d.id + 1}</span>
-            <BatteryBar level={d.batteryLevel} />
-            <span style={{ color: statusColor(d.status), fontSize: 11, minWidth: 50, textAlign: 'right' }}>
-              {statusLabel(d.status)}
-            </span>
-          </div>
-        ))}
+      <div className="stats-section">
+        <div className="section-title-row">
+          <h3>Drone health</h3>
+          <span>{snapshot.drones.length} active units</span>
+        </div>
+
+        <div className="drone-list">
+          {snapshot.drones.map(d => (
+            <div key={d.id} className="drone-card">
+              <div>
+                <div className="drone-name">Drone {d.id + 1}</div>
+                <div className="drone-meta">{d.cellsCovered} cells covered</div>
+              </div>
+              <div className="drone-status-block">
+                <BatteryBar level={d.batteryLevel} />
+                <span className="status-tag" style={{ color: statusColor(d.status) }}>
+                  {statusLabel(d.status)}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   )
 }
 
 function BatteryBar({ level }: { level: number }) {
-  const color = level > 0.5 ? '#40e040' : level > 0.2 ? '#e0e040' : '#e04040'
+  const color = level > 0.5 ? '#7ccf7c' : level > 0.2 ? '#dcbf63' : '#d36d59'
+
   return (
-    <div style={{ width: 50, height: 8, background: '#333', borderRadius: 2, marginRight: 8 }}>
-      <div style={{ width: `${level * 100}%`, height: '100%', background: color, borderRadius: 2 }} />
+    <div className="battery-wrap">
+      <div className="battery-track">
+        <div className="battery-fill" style={{ width: `${level * 100}%`, background: color }} />
+      </div>
+      <span>{Math.round(level * 100)}%</span>
     </div>
   )
-}
-
-const sectionStyle: React.CSSProperties = {
-  padding: '8px 0',
-}
-
-const rowStyle: React.CSSProperties = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  padding: '2px 0',
-  fontSize: 13,
-  fontFamily: 'monospace',
-  color: '#e0e0d0',
-}
-
-const dimStyle: React.CSSProperties = {
-  color: '#a0a090',
-  fontSize: 12,
 }

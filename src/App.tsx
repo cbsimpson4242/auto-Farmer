@@ -9,6 +9,7 @@ export default function App() {
     snapshot,
     isRunning,
     isPaused,
+    speedMultiplier,
     onStart,
     onPause,
     onReset,
@@ -17,42 +18,59 @@ export default function App() {
   } = useSimulation()
 
   return (
-    <div style={{
-      display: 'flex',
-      gap: 16,
-      padding: 16,
-      minHeight: '100vh',
-      background: '#111',
-      color: '#e0e0d0',
-      fontFamily: 'monospace',
-    }}>
-      <div style={{ flex: '1 1 auto' }}>
-        <SimulationCanvas canvasRef={canvasRef} />
-      </div>
-      <div style={{
-        width: 220,
-        flexShrink: 0,
-        padding: 12,
-        background: '#1a1a1a',
-        borderRadius: 6,
-        border: '1px solid #333',
-        alignSelf: 'flex-start',
-      }}>
-        <h2 style={{ margin: '0 0 12px', fontSize: 14, color: '#8ab88a' }}>
-          Auto Farmer
-        </h2>
-        <ControlPanel
-          isRunning={isRunning}
-          isPaused={isPaused}
-          onStart={onStart}
-          onPause={onPause}
-          onReset={onReset}
-          onSpeedChange={onSpeedChange}
-          onDroneCountChange={onDroneCountChange}
-          droneCount={snapshot.drones.length}
-        />
-        <StatsPanel snapshot={snapshot} />
-      </div>
+    <div className="app-shell">
+      <div className="app-backdrop" />
+
+      <main className="app-layout">
+        <section className="app-main-panel">
+          <div className="app-hero">
+            <div>
+              <p className="eyebrow">Autonomous field operations</p>
+              <h1>Auto Farmer</h1>
+              <p className="hero-copy">
+                Coordinate smart drones, track fertilizer usage, and monitor field coverage in real time.
+              </p>
+            </div>
+
+            <div className="hero-badges" aria-label="Simulation status">
+              <span className={`status-pill ${isRunning ? 'is-live' : 'is-idle'}`}>
+                {isRunning ? (isPaused ? 'Paused' : 'Live run') : 'Ready'}
+              </span>
+              <span className="status-pill">{snapshot.drones.length} drones</span>
+              <span className="status-pill">{speedMultiplier}x speed</span>
+            </div>
+          </div>
+
+          <SimulationCanvas canvasRef={canvasRef} />
+        </section>
+
+        <aside className="app-sidebar">
+          <div className="sidebar-card brand-card">
+            <p className="sidebar-label">Mission control</p>
+            <p className="sidebar-copy">
+              Tune launch settings, adjust pace, and keep the fleet productive from one panel.
+            </p>
+          </div>
+
+          <div className="sidebar-card">
+            <ControlPanel
+              isRunning={isRunning}
+              isPaused={isPaused}
+              speedMultiplier={speedMultiplier}
+              onStart={onStart}
+              onPause={onPause}
+              onReset={onReset}
+              onSpeedChange={onSpeedChange}
+              onDroneCountChange={onDroneCountChange}
+              droneCount={snapshot.drones.length}
+            />
+          </div>
+
+          <div className="sidebar-card">
+            <StatsPanel snapshot={snapshot} />
+          </div>
+        </aside>
+      </main>
     </div>
   )
 }
