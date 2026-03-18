@@ -17,12 +17,12 @@ export const FERTILIZER_PER_CELL = 0.5 // liters
 // Colors
 export const COLORS = {
   background: '#0f172a',
-  fieldBorder: '#1e293b',
-  cellEmpty: '#1e293b',
-  cellCovered: '#3b82f6',
-  cellCoveredDot: '#60a5fa',
-  cellObstacle: '#334155',
-  cellObstacleStroke: '#475569',
+  fieldBorder: 'rgba(255, 255, 255, 0.3)',
+  cellEmpty: 'rgba(0, 0, 0, 0)', // Fully transparent
+  cellCovered: 'rgba(59, 130, 246, 0.4)', // Semi-transparent blue
+  cellCoveredDot: 'rgba(96, 165, 250, 0.6)',
+  cellObstacle: 'rgba(239, 68, 68, 0.3)', // Semi-transparent red
+  cellObstacleStroke: 'rgba(239, 68, 68, 0.5)',
   droneBody: '#f8fafc',
   droneWorking: '#60a5fa',
   droneReturning: '#94a3b8',
@@ -31,10 +31,10 @@ export const COLORS = {
   batteryGreen: '#22c55e',
   batteryYellow: '#eab308',
   batteryRed: '#ef4444',
-  baseStation: '#1e293b',
-  basePad: '#334155',
+  baseStation: 'rgba(30, 41, 59, 0.8)',
+  basePad: 'rgba(51, 65, 85, 0.8)',
   hudText: '#94a3b8',
-  trailColor: 'rgba(59, 130, 246, 0.2)',
+  trailColor: 'rgba(59, 130, 246, 0.4)',
 } as const
 
 // Canvas

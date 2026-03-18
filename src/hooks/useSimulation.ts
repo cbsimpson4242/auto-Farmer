@@ -8,6 +8,7 @@ import { renderField } from '../rendering/renderField'
 import { renderDrone } from '../rendering/renderDrone'
 import { renderBase } from '../rendering/renderBase'
 import { renderHUD } from '../rendering/renderHUD'
+import { renderMap } from '../rendering/renderMap'
 
 function createDrone(id: number, basePx: Vec2): Drone {
   return {
@@ -94,8 +95,7 @@ function tick(sim: SimState, deltaMs: number): void {
 
 function render(ctx: CanvasRenderingContext2D, sim: SimState): void {
   const canvas = ctx.canvas
-  ctx.fillStyle = COLORS.background
-  ctx.fillRect(0, 0, canvas.width, canvas.height)
+  renderMap(ctx, canvas.width, canvas.height)
 
   renderBase(ctx, sim.base, sim.droneCount)
 
