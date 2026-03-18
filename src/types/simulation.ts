@@ -6,13 +6,40 @@ export interface Vec2 {
   y: number
 }
 
+export interface Coordinate {
+  lng: number
+  lat: number
+}
+
+export interface GeoBounds {
+  west: number
+  south: number
+  east: number
+  north: number
+}
+
+export interface ExclusionZone {
+  id: string
+  label: string
+  polygon: Coordinate[]
+}
+
 export interface Field {
   id: number
   label: string
-  originPx: Vec2
+  crop: string
+  applicationRateLHa: number
+  polygon: Coordinate[]
+  exclusions: ExclusionZone[]
+  bounds: GeoBounds
+  projectionCenter: Coordinate
+  gridOriginMeters: Vec2
   cols: number
   rows: number
-  cellSize: number
+  cellSizeMeters: number
+  cellAreaHa: number
+  totalAreaHa: number
+  fertilizerPerCellLiters: number
   cells: CellState[]
   obstacleSet: Set<string>
   traversableCount: number
@@ -27,27 +54,35 @@ export interface DroneRoute {
 export interface Drone {
   id: number
   status: DroneStatus
-  px: Vec2
-  targetPx: Vec2
+  position: Coordinate
+  targetPosition: Coordinate
   route: DroneRoute | null
-  batteryLevel: number       // 0.0 – 1.0
+  batteryLevel: number
   batteryDrainPerCell: number
-  speed: number              // pixels/sec
-  moveProgress: number       // 0.0 – 1.0 interpolation
+  speed: number
   cellsCovered: number
   fertilizerDispensed: number
-  trail: Vec2[]              // last N positions for rendering
+  trail: Coordinate[]
 }
 
 export interface BaseStation {
-  px: Vec2
+  position: Coordinate
   label: string
 }
 
 export interface StatsSnapshot {
   elapsedMs: number
-  totalCoverage: number      // 0.0 – 1.0
-  fieldCoverage: { id: number; label: string; coverage: number }[]
+  totalCoverage: number
+  fieldCoverage: {
+    id: number
+    label: string
+    crop: string
+    coverage: number
+    treatedAreaHa: number
+    totalAreaHa: number
+    targetLiters: number
+    appliedLiters: number
+  }[]
   drones: {
     id: number
     status: DroneStatus

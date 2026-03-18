@@ -1,5 +1,5 @@
-import { SimState, Drone, Vec2, DroneRoute } from '../types/simulation'
-import { CELL_SIZE } from './constants'
+import { SimState, Drone, Vec2, DroneRoute, Field, Coordinate } from '../types/simulation'
+import { cellToCoordinate } from './geo'
 
 /**
  * Try to assign work to an idle drone.
@@ -29,7 +29,7 @@ export function tryAssignWork(sim: SimState, drone: Drone): boolean {
   const field = sim.fields[bestFieldId]
 
   // Chunk: ceil(remaining / idle_drones), minimum one row worth of cells
-  const minChunk = field.cols
+  const minChunk = Math.max(10, Math.round(field.traversableCount / Math.max(1, field.rows)))
   const chunkSize = Math.max(minChunk, Math.ceil(queue.length / Math.max(1, idleCount)))
   const claimed = queue.splice(0, Math.min(chunkSize, queue.length))
 
@@ -44,10 +44,6 @@ export function tryAssignWork(sim: SimState, drone: Drone): boolean {
   return true
 }
 
-/** Convert a cell coordinate to canvas pixel position (center of cell) */
-export function cellToPixel(field: { originPx: Vec2; cellSize: number }, col: number, row: number): Vec2 {
-  return {
-    x: field.originPx.x + col * field.cellSize + field.cellSize / 2,
-    y: field.originPx.y + row * field.cellSize + field.cellSize / 2,
-  }
+export function cellToPosition(field: Field, col: number, row: number): Coordinate {
+  return cellToCoordinate(field, col, row)
 }

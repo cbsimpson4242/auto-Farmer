@@ -1,35 +1,71 @@
 import { useRef, useState, useEffect, useCallback } from 'react'
-import { SimState, StatsSnapshot, Drone, Vec2 } from '../types/simulation'
-import { createFields, createBase, getCanvasSize } from '../simulation/fieldLayout'
+import { SimState, StatsSnapshot, Drone, Coordinate } from '../types/simulation'
+import { createFields, createBase } from '../simulation/fieldLayout'
 import { computeSweepPath } from '../simulation/pathPlanner'
 import { tickDrone } from '../simulation/droneStateMachine'
-import { BATTERY_DRAIN_PER_CELL, DRONE_SPEED, FERTILIZER_PER_CELL, COLORS } from '../simulation/constants'
-import { renderField } from '../rendering/renderField'
-import { renderDrone } from '../rendering/renderDrone'
-import { renderBase } from '../rendering/renderBase'
-import { renderHUD } from '../rendering/renderHUD'
+import { BATTERY_DRAIN_PER_CELL, DRONE_SPEED } from '../simulation/constants'
 
-function createDrone(id: number, basePx: Vec2): Drone {
+function createDrone(id: number, basePosition: Coordinate): Drone {
   return {
     id,
     status: 'idle',
-    px: { x: basePx.x + (id - 1) * 12, y: basePx.y },
-    targetPx: { ...basePx },
+    position: {
+      lng: basePosition.lng + id * 0.00005,
+      lat: basePosition.lat,
+    },
+    targetPosition: { ...basePosition },
     route: null,
     batteryLevel: 1.0,
     batteryDrainPerCell: BATTERY_DRAIN_PER_CELL,
     speed: DRONE_SPEED,
-    moveProgress: 0,
     cellsCovered: 0,
     fertilizerDispensed: 0,
     trail: [],
   }
 }
 
+function extractSnapshot(sim: SimState): StatsSnapshot {
+  const fieldCoverage = sim.fields.map(field => {
+    let covered = 0
+    for (const cell of field.cells) if (cell === 'covered') covered++
+
+    return {
+      id: field.id,
+      label: field.label,
+      crop: field.crop,
+      coverage: field.traversableCount > 0 ? covered / field.traversableCount : 1,
+      treatedAreaHa: covered * field.cellAreaHa,
+      totalAreaHa: field.totalAreaHa,
+      targetLiters: field.totalAreaHa * field.applicationRateLHa,
+      appliedLiters: covered * field.fertilizerPerCellLiters,
+    }
+  })
+
+  const totalTraversable = sim.fields.reduce((sum, field) => sum + field.traversableCount, 0)
+  const totalCovered = sim.fields.reduce((sum, field) => {
+    let covered = 0
+    for (const cell of field.cells) if (cell === 'covered') covered++
+    return sum + covered
+  }, 0)
+
+  return {
+    elapsedMs: sim.elapsedMs,
+    totalCoverage: totalTraversable > 0 ? totalCovered / totalTraversable : 1,
+    fieldCoverage,
+    drones: sim.drones.map(drone => ({
+      id: drone.id,
+      status: drone.status,
+      batteryLevel: drone.batteryLevel,
+      cellsCovered: drone.cellsCovered,
+    })),
+    totalFertilizer: sim.drones.reduce((sum, drone) => sum + drone.fertilizerDispensed, 0),
+  }
+}
+
 function createInitialSimState(droneCount: number): SimState {
   const fields = createFields()
   const base = createBase(fields)
-  const drones = Array.from({ length: droneCount }, (_, i) => createDrone(i, base.px))
+  const drones = Array.from({ length: droneCount }, (_, index) => createDrone(index, base.position))
 
   return {
     running: false,
@@ -41,47 +77,25 @@ function createInitialSimState(droneCount: number): SimState {
     base,
     drones,
     fieldWorkQueues: new Map(),
-    statsSnapshot: extractSnapshot({ fields, drones, elapsedMs: 0 } as any),
+    statsSnapshot: extractSnapshot({
+      running: false,
+      paused: false,
+      elapsedMs: 0,
+      speedMultiplier: 1,
+      droneCount,
+      fields,
+      base,
+      drones,
+      fieldWorkQueues: new Map(),
+      statsSnapshot: {} as StatsSnapshot,
+    }),
   }
 }
 
 function initWorkQueues(sim: SimState): void {
   sim.fieldWorkQueues.clear()
   for (const field of sim.fields) {
-    const sweep = computeSweepPath(field)
-    sim.fieldWorkQueues.set(field.id, sweep)
-  }
-}
-
-function extractSnapshot(sim: SimState): StatsSnapshot {
-  const fieldCoverage = sim.fields.map(f => {
-    let covered = 0
-    for (const c of f.cells) if (c === 'covered') covered++
-    return {
-      id: f.id,
-      label: f.label,
-      coverage: f.traversableCount > 0 ? covered / f.traversableCount : 1,
-    }
-  })
-
-  const totalTraversable = sim.fields.reduce((s, f) => s + f.traversableCount, 0)
-  const totalCovered = sim.fields.reduce((s, f) => {
-    let c = 0
-    for (const cell of f.cells) if (cell === 'covered') c++
-    return s + c
-  }, 0)
-
-  return {
-    elapsedMs: sim.elapsedMs,
-    totalCoverage: totalTraversable > 0 ? totalCovered / totalTraversable : 1,
-    fieldCoverage,
-    drones: sim.drones.map(d => ({
-      id: d.id,
-      status: d.status,
-      batteryLevel: d.batteryLevel,
-      cellsCovered: d.cellsCovered,
-    })),
-    totalFertilizer: sim.drones.reduce((s, d) => s + d.fertilizerDispensed, 0),
+    sim.fieldWorkQueues.set(field.id, computeSweepPath(field))
   }
 }
 
@@ -92,51 +106,16 @@ function tick(sim: SimState, deltaMs: number): void {
   }
 }
 
-function render(ctx: CanvasRenderingContext2D, sim: SimState): void {
-  const canvas = ctx.canvas
-  ctx.fillStyle = COLORS.background
-  ctx.fillRect(0, 0, canvas.width, canvas.height)
-
-  renderBase(ctx, sim.base, sim.droneCount)
-
-  for (const field of sim.fields) {
-    renderField(ctx, field)
-  }
-
-  for (const drone of sim.drones) {
-    renderDrone(ctx, drone)
-  }
-
-  renderHUD(ctx, sim)
-}
-
 export function useSimulation() {
-  const canvasRef = useRef<HTMLCanvasElement>(null)
   const simRef = useRef<SimState>(createInitialSimState(3))
   const [snapshot, setSnapshot] = useState<StatsSnapshot>(() => extractSnapshot(simRef.current))
   const [isRunning, setIsRunning] = useState(false)
   const [isPaused, setIsPaused] = useState(false)
 
-  // Set canvas size based on field layout
   useEffect(() => {
-    const canvas = canvasRef.current
-    if (!canvas) return
-    const sim = simRef.current
-    const size = getCanvasSize(sim.fields, sim.base)
-    canvas.width = size.width
-    canvas.height = size.height
-  }, [])
-
-  // RAF loop
-  useEffect(() => {
-    const canvas = canvasRef.current
-    if (!canvas) return
-    const ctx = canvas.getContext('2d')!
-    if (!ctx) return
-
     let lastTime = 0
     let frameCount = 0
-    let animId = 0
+    let animationId = 0
 
     function loop(now: number) {
       if (lastTime === 0) lastTime = now
@@ -148,17 +127,16 @@ export function useSimulation() {
       if (sim.running && !sim.paused) {
         tick(sim, delta * sim.speedMultiplier)
         frameCount++
-        if (frameCount % 6 === 0) {
+        if (frameCount % 2 === 0) {
           setSnapshot(extractSnapshot(sim))
         }
       }
 
-      render(ctx, sim)
-      animId = requestAnimationFrame(loop)
+      animationId = requestAnimationFrame(loop)
     }
 
-    animId = requestAnimationFrame(loop)
-    return () => cancelAnimationFrame(animId)
+    animationId = requestAnimationFrame(loop)
+    return () => cancelAnimationFrame(animationId)
   }, [])
 
   const onStart = useCallback(() => {
@@ -169,6 +147,7 @@ export function useSimulation() {
       sim.paused = false
       setIsRunning(true)
       setIsPaused(false)
+      setSnapshot(extractSnapshot(sim))
     } else if (sim.paused) {
       sim.paused = false
       setIsPaused(false)
@@ -180,26 +159,19 @@ export function useSimulation() {
     if (sim.running && !sim.paused) {
       sim.paused = true
       setIsPaused(true)
+      setSnapshot(extractSnapshot(sim))
     }
   }, [])
 
   const onReset = useCallback(() => {
     const droneCount = simRef.current.droneCount
     const speedMultiplier = simRef.current.speedMultiplier
-    const newSim = createInitialSimState(droneCount)
-    newSim.speedMultiplier = speedMultiplier
-    simRef.current = newSim
-    setSnapshot(extractSnapshot(newSim))
+    const nextSim = createInitialSimState(droneCount)
+    nextSim.speedMultiplier = speedMultiplier
+    simRef.current = nextSim
+    setSnapshot(extractSnapshot(nextSim))
     setIsRunning(false)
     setIsPaused(false)
-
-    // Resize canvas
-    const canvas = canvasRef.current
-    if (canvas) {
-      const size = getCanvasSize(newSim.fields, newSim.base)
-      canvas.width = size.width
-      canvas.height = size.height
-    }
   }, [])
 
   const onSpeedChange = useCallback((multiplier: number) => {
@@ -208,15 +180,15 @@ export function useSimulation() {
 
   const onDroneCountChange = useCallback((count: number) => {
     const sim = simRef.current
-    if (sim.running) return // can't change during simulation
-    const newSim = createInitialSimState(count)
-    newSim.speedMultiplier = sim.speedMultiplier
-    simRef.current = newSim
-    setSnapshot(extractSnapshot(newSim))
+    if (sim.running) return
+    const nextSim = createInitialSimState(count)
+    nextSim.speedMultiplier = sim.speedMultiplier
+    simRef.current = nextSim
+    setSnapshot(extractSnapshot(nextSim))
   }, [])
 
   return {
-    canvasRef,
+    sim: simRef.current,
     snapshot,
     isRunning,
     isPaused,

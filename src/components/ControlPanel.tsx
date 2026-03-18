@@ -1,5 +1,3 @@
-import React from 'react'
-
 interface Props {
   isRunning: boolean
   isPaused: boolean
@@ -22,73 +20,51 @@ export function ControlPanel({
   droneCount,
 }: Props) {
   return (
-    <div style={{ marginBottom: 16 }}>
-      <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-        <button
-          onClick={onStart}
-          disabled={isRunning && !isPaused}
-          style={btnStyle}
-        >
+    <section className="panel-card control-card">
+      <div className="panel-heading">
+        <p className="eyebrow">Mission Controls</p>
+        <h2>Dispatch the fleet</h2>
+      </div>
+
+      <p className="panel-copy">
+        Start a treatment pass, pause for inspection, or reset to compare how quickly each launch plan clears the parcels.
+      </p>
+
+      <div className="button-row">
+        <button onClick={onStart} disabled={isRunning && !isPaused} className="ui-button">
           {!isRunning ? 'Start' : 'Resume'}
         </button>
-        <button
-          onClick={onPause}
-          disabled={!isRunning || isPaused}
-          style={btnStyle}
-        >
+        <button onClick={onPause} disabled={!isRunning || isPaused} className="ui-button ui-button-secondary">
           Pause
         </button>
-        <button onClick={onReset} style={btnStyle}>
+        <button onClick={onReset} className="ui-button ui-button-secondary">
           Reset
         </button>
       </div>
 
-      <div style={{ marginBottom: 12 }}>
-        <label style={labelStyle}>Speed:</label>
-        <div style={{ display: 'flex', gap: 4 }}>
-          {[1, 2, 4, 8].map(s => (
-            <button
-              key={s}
-              onClick={() => onSpeedChange(s)}
-              style={{ ...btnStyle, fontSize: 11, padding: '3px 8px' }}
-            >
-              {s}x
+      <div className="control-block">
+        <label className="control-label">Simulation Speed</label>
+        <div className="speed-grid">
+          {[1, 2, 4, 8].map(speed => (
+            <button key={speed} onClick={() => onSpeedChange(speed)} className="ui-button ui-button-small">
+              {speed}x
             </button>
           ))}
         </div>
       </div>
 
-      <div>
-        <label style={labelStyle}>Drones: {droneCount}</label>
+      <div className="control-block">
+        <label className="control-label">Drones Available: {droneCount}</label>
         <input
           type="range"
           min={1}
           max={8}
           value={droneCount}
-          onChange={e => onDroneCountChange(Number(e.target.value))}
+          onChange={event => onDroneCountChange(Number(event.target.value))}
           disabled={isRunning}
-          style={{ width: '100%' }}
+          className="control-slider"
         />
       </div>
-    </div>
+    </section>
   )
-}
-
-const btnStyle: React.CSSProperties = {
-  padding: '6px 14px',
-  background: '#3a5a3a',
-  color: '#e0e0d0',
-  border: '1px solid #5a8a5a',
-  borderRadius: 4,
-  cursor: 'pointer',
-  fontFamily: 'monospace',
-  fontSize: 13,
-}
-
-const labelStyle: React.CSSProperties = {
-  display: 'block',
-  color: '#c0c0b0',
-  fontFamily: 'monospace',
-  fontSize: 12,
-  marginBottom: 4,
 }
