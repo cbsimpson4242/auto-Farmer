@@ -1,46 +1,47 @@
 export type CellState = 'empty' | 'covered' | 'obstacle'
 export type DroneStatus = 'idle' | 'flying_to_field' | 'working' | 'returning' | 'charging'
 
-export interface Vec2 {
-  x: number
-  y: number
+export interface GeoPoint {
+  lat: number
+  lon: number
+  height: number
 }
 
 export interface Field {
   id: number
   label: string
-  originPx: Vec2
-  cols: number
-  rows: number
-  cellSize: number
-  cells: CellState[]
-  obstacleSet: Set<string>
+  // Polygon perimeter points
+  boundary: GeoPoint[]
+  // Simulation grid in 3D
+  cells: {
+    point: GeoPoint
+    state: CellState
+  }[]
   traversableCount: number
 }
 
 export interface DroneRoute {
   fieldId: number
-  waypoints: Vec2[]
+  waypoints: GeoPoint[]
   waypointIndex: number
 }
 
 export interface Drone {
   id: number
   status: DroneStatus
-  px: Vec2
-  targetPx: Vec2
+  position: GeoPoint
+  targetPosition: GeoPoint
   route: DroneRoute | null
   batteryLevel: number       // 0.0 – 1.0
   batteryDrainPerCell: number
-  speed: number              // pixels/sec
+  speed: number              // meters/sec
   moveProgress: number       // 0.0 – 1.0 interpolation
   cellsCovered: number
   fertilizerDispensed: number
-  trail: Vec2[]              // last N positions for rendering
 }
 
 export interface BaseStation {
-  px: Vec2
+  position: GeoPoint
   label: string
 }
 
@@ -58,6 +59,7 @@ export interface StatsSnapshot {
 }
 
 export interface SimState {
+  mode: 'mapping' | 'simulating'
   running: boolean
   paused: boolean
   elapsedMs: number
@@ -66,6 +68,6 @@ export interface SimState {
   fields: Field[]
   base: BaseStation
   drones: Drone[]
-  fieldWorkQueues: Map<number, Vec2[]>
+  fieldWorkQueues: Map<number, GeoPoint[]>
   statsSnapshot: StatsSnapshot
 }
