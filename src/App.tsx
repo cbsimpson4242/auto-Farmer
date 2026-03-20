@@ -6,6 +6,7 @@ import { StatsPanel } from './components/StatsPanel'
 export default function App() {
   const {
     sim,
+    currentPoints,
     onAddPoint,
     onCompleteField,
     onStart,
@@ -44,6 +45,7 @@ export default function App() {
 
           <CesiumViewer
             simState={sim}
+            currentPoints={currentPoints}
             onAddPoint={onAddPoint}
             onCompleteField={onCompleteField}
           />

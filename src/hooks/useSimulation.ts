@@ -42,7 +42,7 @@ export function useSimulation() {
     droneCount: 3,
     fields: [],
     base: { position: { lat: 41.6005, lon: -93.6091, height: 0 }, label: 'Base' },
-    drones: [],
+    drones: Array.from({ length: 3 }, (_, i) => createDrone(i, { lat: 41.6005, lon: -93.6091, height: 0 })),
     fieldWorkQueues: new Map(),
     statsSnapshot: {
       elapsedMs: 0,
@@ -54,6 +54,21 @@ export function useSimulation() {
   }))
 
   const [currentPoints, setCurrentPoints] = useState<GeoPoint[]>([])
+
+  useEffect(() => {
+    setSim(prev => {
+      const nextDrones = Array.from({ length: prev.droneCount }, (_, i) => {
+        const existingDrone = prev.drones[i]
+        return existingDrone ? existingDrone : createDrone(i, prev.base.position)
+      })
+
+      return {
+        ...prev,
+        drones: nextDrones,
+        statsSnapshot: extractSnapshot({ ...prev, drones: nextDrones }),
+      }
+    })
+  }, [sim.droneCount])
 
   const onAddPoint = useCallback((point: GeoPoint) => {
     setCurrentPoints(prev => [...prev, point])
@@ -122,12 +137,25 @@ export function useSimulation() {
   }, [])
 
   const onPause = useCallback(() => setSim(prev => ({ ...prev, paused: !prev.paused })), [])
-  const onReset = useCallback(() => setSim(prev => ({ ...prev, running: false, paused: false, elapsedMs: 0, fields: [], drones: [] })), [])
+  const onReset = useCallback(() => setSim(prev => {
+    const resetDrones = Array.from({ length: prev.droneCount }, (_, i) => createDrone(i, prev.base.position))
+
+    return {
+      ...prev,
+      running: false,
+      paused: false,
+      elapsedMs: 0,
+      fields: [],
+      drones: resetDrones,
+      statsSnapshot: extractSnapshot({ ...prev, elapsedMs: 0, fields: [], drones: resetDrones }),
+    }
+  }), [])
   const onSpeedChange = useCallback((s: number) => setSim(prev => ({ ...prev, speedMultiplier: s })), [])
   const onDroneCountChange = useCallback((c: number) => setSim(prev => ({ ...prev, droneCount: c })), [])
 
   return {
     sim,
+    currentPoints,
     onAddPoint,
     onCompleteField,
     onStart,
