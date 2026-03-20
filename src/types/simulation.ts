@@ -22,7 +22,9 @@ export interface Field {
 
 export interface DroneRoute {
   fieldId: number
+  fieldIds: number[]
   waypoints: GeoPoint[]
+  cellIndexes: number[]
   waypointIndex: number
 }
 

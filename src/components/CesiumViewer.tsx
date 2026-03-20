@@ -33,6 +33,44 @@ function getFieldCenter(boundary: GeoPoint[]) {
   }
 }
 
+function getFieldCoverageRatio(field: SimState['fields'][number]) {
+  if (field.traversableCount === 0) return 0
+  const coveredCount = field.cells.filter(cell => cell.state === 'covered').length
+  return coveredCount / field.traversableCount
+}
+
+function getGeoPointFromScreenPosition(
+  viewer: Cesium.Viewer,
+  position: Cesium.Cartesian2,
+): GeoPoint | null {
+  let cartesian: Cesium.Cartesian3 | undefined
+
+  if (viewer.scene.pickPositionSupported) {
+    cartesian = viewer.scene.pickPosition(position)
+  }
+
+  if (!cartesian) {
+    const ray = viewer.camera.getPickRay(position)
+    cartesian = ray ? viewer.scene.globe.pick(ray, viewer.scene) : undefined
+  }
+
+  if (!cartesian) {
+    cartesian = viewer.camera.pickEllipsoid(position, viewer.scene.globe.ellipsoid) ?? undefined
+  }
+
+  if (!cartesian) {
+    return null
+  }
+
+  const cartographic = Cesium.Cartographic.fromCartesian(cartesian)
+
+  return {
+    lon: Cesium.Math.toDegrees(cartographic.longitude),
+    lat: Cesium.Math.toDegrees(cartographic.latitude),
+    height: Number.isFinite(cartographic.height) ? cartographic.height : 0,
+  }
+}
+
 export function CesiumViewer({ simState, currentPoints, onAddPoint, onCompleteField }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const viewerRef = useRef<Cesium.Viewer | null>(null)
@@ -113,18 +151,10 @@ export function CesiumViewer({ simState, currentPoints, onAddPoint, onCompleteFi
         handler.setInputAction((click: Cesium.ScreenSpaceEventHandler.PositionedEvent) => {
           if (modeRef.current !== 'mapping') return
 
-          const pickedCartesian = viewer!.scene.pickPositionSupported
-            ? viewer!.scene.pickPosition(click.position)
-            : undefined
-          const cartesian = pickedCartesian ?? viewer!.camera.pickEllipsoid(click.position, viewer!.scene.globe.ellipsoid)
+          const point = getGeoPointFromScreenPosition(viewer!, click.position)
 
-          if (cartesian) {
-            const cartographic = Cesium.Cartographic.fromCartesian(cartesian)
-            onAddPoint({
-              lon: Cesium.Math.toDegrees(cartographic.longitude),
-              lat: Cesium.Math.toDegrees(cartographic.latitude),
-              height: Number.isFinite(cartographic.height) ? cartographic.height : 0,
-            })
+          if (point) {
+            onAddPoint(point)
           }
         }, Cesium.ScreenSpaceEventType.LEFT_CLICK)
     }
@@ -211,16 +241,30 @@ export function CesiumViewer({ simState, currentPoints, onAddPoint, onCompleteFi
     simState.fields.forEach(field => {
       const center = getFieldCenter(field.boundary)
       const fieldLoop = [...field.boundary, field.boundary[0]]
+      const coverageRatio = getFieldCoverageRatio(field)
 
       viewer.entities.add({
         polygon: {
           hierarchy: new Cesium.PolygonHierarchy(
             field.boundary.map(point => toCartesian(point, 6))
           ),
-          material: Cesium.Color.fromCssColorString('#2563eb').withAlpha(0.24),
+          material: Cesium.Color.fromCssColorString('#22c55e').withAlpha(0.14 + coverageRatio * 0.28),
           perPositionHeight: true,
           outline: false,
         },
+      })
+
+      const coveredCells = field.cells.filter(cell => cell.state === 'covered')
+      coveredCells.forEach((cell, index) => {
+        viewer.entities.add({
+          id: `${field.id}-covered-${index}`,
+          position: toCartesian(cell.point, 12),
+          point: {
+            pixelSize: 5,
+            color: Cesium.Color.fromCssColorString('#34d399').withAlpha(0.9),
+            disableDepthTestDistance: Number.POSITIVE_INFINITY,
+          },
+        })
       })
 
       viewer.entities.add({
@@ -232,7 +276,7 @@ export function CesiumViewer({ simState, currentPoints, onAddPoint, onCompleteFi
         },
         position: toCartesian(center, 18),
         label: {
-          text: field.label,
+          text: `${field.label} ${Math.round(coverageRatio * 100)}%`,
           font: '13px "JetBrains Mono", monospace',
           fillColor: Cesium.Color.fromCssColorString('#f8fafc'),
           showBackground: true,
@@ -245,6 +289,22 @@ export function CesiumViewer({ simState, currentPoints, onAddPoint, onCompleteFi
     })
 
     simState.drones.forEach(drone => {
+      const remainingRoute = drone.route
+        ? [drone.position, ...drone.route.waypoints.slice(drone.route.waypointIndex)]
+        : []
+
+      if (remainingRoute.length > 1) {
+        viewer.entities.add({
+          id: `drone-route-${drone.id}`,
+          polyline: {
+            positions: remainingRoute.map(point => toCartesian(point, 18)),
+            width: 2,
+            material: Cesium.Color.fromCssColorString('#60a5fa').withAlpha(0.45),
+            clampToGround: false,
+          },
+        })
+      }
+
       viewer.entities.add({
         position: toCartesian(drone.position, 28),
         point: {
